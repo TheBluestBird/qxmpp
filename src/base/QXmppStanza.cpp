@@ -138,7 +138,7 @@ bool QXmppExtendedAddress::isValid() const
     return !d->type.isEmpty() && !d->jid.isEmpty();
 }
 
-/// \cond
+/// \cond
 void QXmppExtendedAddress::parse(const QDomElement &element)
 {
     d->delivered = element.attribute("delivered") == "true";
@@ -158,7 +158,7 @@ void QXmppExtendedAddress::toXml(QXmlStreamWriter *xmlWriter) const
     xmlWriter->writeAttribute("type", d->type);
     xmlWriter->writeEndElement();
 }
-/// \endcond
+/// \endcond
 
 QXmppStanza::Error::Error():
     m_code(0),
@@ -324,7 +324,7 @@ void QXmppStanza::Error::toXml( QXmlStreamWriter *writer ) const
 
     writer->writeEndElement();
 }
-/// \endcond
+/// \endcond
 
 class QXmppStanzaPrivate : public QSharedData
 {
@@ -530,13 +530,13 @@ void QXmppStanza::extensionsToXml(QXmlStreamWriter *xmlWriter) const
     if (!d->extendedAddresses.isEmpty()) {
         xmlWriter->writeStartElement("addresses");
         xmlWriter->writeAttribute("xmlns", ns_extended_addressing);
-        foreach (const QXmppExtendedAddress &address, d->extendedAddresses)
+        for (const auto &address : d->extendedAddresses)
             address.toXml(xmlWriter);
         xmlWriter->writeEndElement();
     }
 
     // other extensions
-    foreach (const QXmppElement &extension, d->extensions)
+    for (const auto &extension : d->extensions)
         extension.toXml(xmlWriter);
 }
 
