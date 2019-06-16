@@ -24,7 +24,6 @@
 #ifndef QXMPPMESSAGE_H
 #define QXMPPMESSAGE_H
 
-#include <QDateTime>
 #include "QXmppStanza.h"
 
 class QXmppMessagePrivate;
@@ -36,9 +35,8 @@ class QXmppMessagePrivate;
 class QXMPP_EXPORT QXmppMessage : public QXmppStanza
 {
 public:
-    /// This enum described a message type.
-    enum Type
-    {
+    /// This enum describes a message type.
+    enum Type {
         Error = 0,
         Normal,
         Chat,
@@ -48,8 +46,7 @@ public:
 
     /// This enum describes a chat state as defined by XEP-0085: Chat State
     /// Notifications.
-    enum State
-    {
+    enum State {
         None = 0,   ///< The message does not contain any chat state information.
         Active,     ///< User is actively participating in the chat session.
         Inactive,   ///< User has not been actively participating in the chat session.
@@ -94,6 +91,8 @@ public:
 
     QXmppMessage& operator=(const QXmppMessage &other);
 
+    bool isXmppStanza() const;
+
     QString body() const;
     void setBody(const QString&);
 
@@ -133,7 +132,7 @@ public:
     QString xhtml() const;
     void setXhtml(const QString &xhtml);
 
-    // XEP-0333: Chat Markers
+    // XEP-0333: Chat State Markers
     bool isMarkable() const;
     void setMarkable(const bool);
 
@@ -149,8 +148,6 @@ public:
     // XEP-0280: Message Carbons
     bool isPrivate() const;
     void setPrivate(const bool);
-
-    bool isXmppStanza() const override;
 
     // XEP-0066: Out of Band Data
     QString outOfBandUrl() const;
