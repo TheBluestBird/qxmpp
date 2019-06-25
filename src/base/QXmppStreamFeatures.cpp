@@ -150,8 +150,10 @@ static QXmppStreamFeatures::Mode readFeature(const QDomElement &element, const c
     return mode;
 }
 
+#include <QDebug>
+
 void QXmppStreamFeatures::parse(const QDomElement &element)
-{
+{   
     m_bindMode = readFeature(element, "bind", ns_bind);
     m_sessionMode = readFeature(element, "session", ns_session);
     m_nonSaslAuthMode = readFeature(element, "auth", ns_authFeature);
@@ -159,6 +161,8 @@ void QXmppStreamFeatures::parse(const QDomElement &element)
     m_streamManagementMode = readFeature(element, "sm", ns_stream_management);
     m_csiMode = readFeature(element, "csi", ns_csi);
     m_registerMode = readFeature(element, "register", ns_register_feature);
+
+    qDebug() << m_tlsMode << m_registerMode;
 
     // parse advertised compression methods
     QDomElement compression = element.firstChildElement("compression");

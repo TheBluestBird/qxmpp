@@ -44,6 +44,7 @@
 #include "QXmppBindIq.h"
 #include "QXmppPingIq.h"
 #include "QXmppSessionIq.h"
+#include "QXmppRegisterIq.h"
 
 #include <QBuffer>
 #include <QCoreApplication>
@@ -373,7 +374,7 @@ void QXmppOutgoingClient::handleStanza(const QDomElement &nodeRecv)
     if (handled)
         return;
 
-    if(QXmppStreamFeatures::isStreamFeatures(nodeRecv))
+    if (QXmppStreamFeatures::isStreamFeatures(nodeRecv))
     {
         QXmppStreamFeatures features;
         features.parse(nodeRecv);

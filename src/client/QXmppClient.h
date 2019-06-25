@@ -92,7 +92,9 @@ public:
         NoError,            ///< No error.
         SocketError,        ///< Error due to TCP socket.
         KeepAliveError,     ///< Error due to no response to a keep alive.
-        XmppStreamError     ///< Error due to XML stream.
+        XmppStreamError,    ///< Error due to XML stream.
+        /// Error because the registration was not supported by the server.
+        RegistrationUnsupportedError
     };
 
     /// This enumeration describes a client state.
