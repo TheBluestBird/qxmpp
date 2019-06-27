@@ -38,8 +38,6 @@
 #include "QXmppOutgoingClient.h"
 #include "QXmppStreamFeatures.h"
 #include "QXmppStreamManagement_p.h"
-#include "QXmppNonSASLAuth.h"
-#include "QXmppSasl_p.h"
 #include "QXmppUtils.h"
 
 // IQ types
@@ -63,8 +61,6 @@ public:
     void connectToHost(const QString &host, quint16 port);
     void connectToNextDNSHost();
 
-    void sendNonSASLAuth(bool plaintext);
-    void sendNonSASLAuthQuery();
     void sendBind();
     void sendSessionStart();
     void sendStreamManagementEnable();
@@ -78,11 +74,6 @@ public:
     QDnsLookup dns;
     int nextSrvRecordIdx;
 
-    // Stream
-    QString streamId;
-    QString streamFrom;
-    QString streamVersion;
-
     // Redirection
     QString redirectHost;
     quint16 redirectPort;
@@ -93,11 +84,6 @@ public:
     bool bindModeAvailable;
     bool sessionAvailable;
     bool sessionStarted;
-
-    // Authentication
-    bool isAuthenticated;
-    QString nonSASLAuthId;
-    QXmppSaslClient *saslClient;
 
     // Stream Management
     bool streamManagementAvailable;
@@ -124,8 +110,6 @@ QXmppOutgoingClientPrivate::QXmppOutgoingClientPrivate(QXmppOutgoingClient *qq)
     , bindModeAvailable(false)
     , sessionAvailable(false)
     , sessionStarted(false)
-    , isAuthenticated(false)
-    , saslClient(nullptr)
     , streamManagementAvailable(false)
     , canResume(false)
     , isResuming(false)
@@ -274,6 +258,12 @@ void QXmppOutgoingClient::disconnectFromHost()
     QXmppStream::disconnectFromHost();
 }
 
+void QXmppOutgoingClient::handleAuthenticated()
+{
+    d->sessionStarted = true;
+    emit connected();
+}
+
 void QXmppOutgoingClient::_q_dnsLookupFinished()
 {
     if (d->dns.error() == QDnsLookup::NoError &&
@@ -286,13 +276,6 @@ void QXmppOutgoingClient::_q_dnsLookupFinished()
                 .arg(d->dns.name(), d->dns.errorString()));
         d->connectToHost(d->config.domain(), d->config.port());
     }
-}
-
-/// Returns true if authentication has succeeded.
-
-bool QXmppOutgoingClient::isAuthenticated() const
-{
-    return d->isAuthenticated;
 }
 
 /// Returns true if the socket is connected and a session has been started.
@@ -309,10 +292,14 @@ bool QXmppOutgoingClient::isClientStateIndicationEnabled() const
     return d->clientStateIndicationEnabled;
 }
 
+void QXmppOutgoingClient::setXmppStreamError(QXmppStanza::Error::Condition error)
+{
+    d->xmppStreamError = error;
+}
+
 void QXmppOutgoingClient::_q_socketDisconnected()
 {
     debug("Socket disconnected");
-    d->isAuthenticated = false;
     if (!d->redirectHost.isEmpty() && d->redirectPort > 0) {
         d->connectToHost(d->redirectHost, d->redirectPort);
         d->redirectHost = QString();
@@ -355,17 +342,6 @@ void QXmppOutgoingClient::handleStart()
 {
     QXmppStream::handleStart();
 
-    // reset stream information
-    d->streamId.clear();
-    d->streamFrom.clear();
-    d->streamVersion.clear();
-
-    // reset authentication step
-    if (d->saslClient) {
-        delete d->saslClient;
-        d->saslClient = nullptr;
-    }
-
     // reset session information
     d->bindId.clear();
     d->sessionId.clear();
@@ -381,20 +357,7 @@ void QXmppOutgoingClient::handleStart()
 
 void QXmppOutgoingClient::handleStream(const QDomElement &streamElement)
 {
-    if(d->streamId.isEmpty())
-        d->streamId = streamElement.attribute("id");
-    if (d->streamFrom.isEmpty())
-        d->streamFrom = streamElement.attribute("from");
-    if(d->streamVersion.isEmpty())
-    {
-        d->streamVersion = streamElement.attribute("version");
-
-        // no version specified, signals XMPP Version < 1.0.
-        // switch to old auth mechanism if enabled
-        if(d->streamVersion.isEmpty() && configuration().useNonSASLAuthentication()) {
-            d->sendNonSASLAuthQuery();
-        }
-    }
+    emit streamReceived(streamElement);
 }
 
 void QXmppOutgoingClient::handleStanza(const QDomElement &nodeRecv)
@@ -432,76 +395,6 @@ void QXmppOutgoingClient::handleStanza(const QDomElement &nodeRecv)
             QXmppRegisterIq iq;
             iq.setType(QXmppIq::Get);
             sendPacket(iq);
-            return;
-        }
-
-        // handle authentication
-        const bool nonSaslAvailable = features.nonSaslAuthMode() != QXmppStreamFeatures::Disabled;
-        const bool saslAvailable = !features.authMechanisms().isEmpty();
-        if (saslAvailable && configuration().useSASLAuthentication())
-        {
-            // supported and preferred SASL auth mechanisms
-            const QString preferredMechanism = configuration().saslAuthMechanism();
-            QStringList supportedMechanisms = QXmppSaslClient::availableMechanisms();
-            if (supportedMechanisms.contains(preferredMechanism)) {
-                supportedMechanisms.removeAll(preferredMechanism);
-                supportedMechanisms.prepend(preferredMechanism);
-            }
-            if (configuration().facebookAppId().isEmpty() || configuration().facebookAccessToken().isEmpty())
-                supportedMechanisms.removeAll("X-FACEBOOK-PLATFORM");
-            if (configuration().windowsLiveAccessToken().isEmpty())
-                supportedMechanisms.removeAll("X-MESSENGER-OAUTH2");
-            if (configuration().googleAccessToken().isEmpty())
-                supportedMechanisms.removeAll("X-OAUTH2");
-
-            // determine SASL Authentication mechanism to use
-            QStringList commonMechanisms;
-            QString usedMechanism;
-            foreach (const QString &mechanism, supportedMechanisms) {
-                if (features.authMechanisms().contains(mechanism))
-                    commonMechanisms << mechanism;
-            }
-            if (commonMechanisms.isEmpty()) {
-                warning("No supported SASL Authentication mechanism available");
-                disconnectFromHost();
-                return;
-            } else {
-                usedMechanism = commonMechanisms.first();
-            }
-
-            d->saslClient = QXmppSaslClient::create(usedMechanism, this);
-            if (!d->saslClient) {
-                warning("SASL mechanism negotiation failed");
-                disconnectFromHost();
-                return;
-            }
-            info(QString("SASL mechanism '%1' selected").arg(d->saslClient->mechanism()));
-            d->saslClient->setHost(d->config.domain());
-            d->saslClient->setServiceType("xmpp");
-            if (d->saslClient->mechanism() == "X-FACEBOOK-PLATFORM") {
-                d->saslClient->setUsername(configuration().facebookAppId());
-                d->saslClient->setPassword(configuration().facebookAccessToken());
-            } else if (d->saslClient->mechanism() == "X-MESSENGER-OAUTH2") {
-                d->saslClient->setPassword(configuration().windowsLiveAccessToken());
-            } else if (d->saslClient->mechanism() == "X-OAUTH2") {
-                d->saslClient->setUsername(configuration().user());
-                d->saslClient->setPassword(configuration().googleAccessToken());
-            } else {
-                d->saslClient->setUsername(configuration().user());
-                d->saslClient->setPassword(configuration().password());
-            }
-
-            // send SASL auth request
-            QByteArray response;
-            if (!d->saslClient->respond(QByteArray(), response)) {
-                warning("SASL initial response failed");
-                disconnectFromHost();
-                return;
-            }
-            sendPacket(QXmppSaslAuth(d->saslClient->mechanism(), response));
-            return;
-        } else if(nonSaslAvailable && configuration().useNonSASLAuthentication()) {
-            d->sendNonSASLAuthQuery();
             return;
         }
 
@@ -556,49 +449,6 @@ void QXmppOutgoingClient::handleStanza(const QDomElement &nodeRecv)
         else
             d->xmppStreamError = QXmppStanza::Error::UndefinedCondition;
         emit error(QXmppClient::XmppStreamError);
-    }
-    else if(ns == ns_sasl)
-    {
-        if (!d->saslClient) {
-            warning("SASL stanza received, but no mechanism selected");
-            return;
-        }
-        if(nodeRecv.tagName() == "success")
-        {
-            debug("Authenticated");
-            d->isAuthenticated = true;
-            handleStart();
-        }
-        else if(nodeRecv.tagName() == "challenge")
-        {
-            QXmppSaslChallenge challenge;
-            challenge.parse(nodeRecv);
-
-            QByteArray response;
-            if (d->saslClient->respond(challenge.value(), response)) {
-                sendPacket(QXmppSaslResponse(response));
-            } else {
-                warning("Could not respond to SASL challenge");
-                disconnectFromHost();
-            }
-        }
-        else if(nodeRecv.tagName() == "failure")
-        {
-            QXmppSaslFailure failure;
-            failure.parse(nodeRecv);
-
-            // RFC3920 defines the error condition as "not-authorized", but
-            // some broken servers use "bad-auth" instead. We tolerate this
-            // by remapping the error to "not-authorized".
-            if (failure.condition() == "not-authorized" || failure.condition() == "bad-auth")
-                d->xmppStreamError = QXmppStanza::Error::NotAuthorized;
-            else
-                d->xmppStreamError = QXmppStanza::Error::UndefinedCondition;
-            emit error(QXmppClient::XmppStreamError);
-
-            warning("Authentication failure");
-            disconnectFromHost();
-        }
     }
     else if(ns == ns_client)
     {
@@ -664,48 +514,6 @@ void QXmppOutgoingClient::handleStanza(const QDomElement &nodeRecv)
             }
             // extensions
 
-            // XEP-0078: Non-SASL Authentication
-            else if(id == d->nonSASLAuthId && type == "result")
-            {
-                // successful Non-SASL Authentication
-                debug("Authenticated (Non-SASL)");
-                d->isAuthenticated = true;
-
-                // xmpp connection made
-                d->sessionStarted = true;
-                emit connected();
-            }
-            else if(QXmppNonSASLAuthIq::isNonSASLAuthIq(nodeRecv))
-            {
-                if(type == "result")
-                {
-                    bool digest = !nodeRecv.firstChildElement("query").
-                         firstChildElement("digest").isNull();
-                    bool plain = !nodeRecv.firstChildElement("query").
-                         firstChildElement("password").isNull();
-                    bool plainText = false;
-
-                    if(plain && digest)
-                    {
-                        if(configuration().nonSASLAuthMechanism() ==
-                           QXmppConfiguration::NonSASLDigest)
-                            plainText = false;
-                        else
-                            plainText = true;
-                    }
-                    else if(plain)
-                        plainText = true;
-                    else if(digest)
-                        plainText = false;
-                    else
-                    {
-                        warning("No supported Non-SASL Authentication mechanism available");
-                        disconnectFromHost();
-                        return;
-                    }
-                    d->sendNonSASLAuth(plainText);
-                }
-            }
             // XEP-0199: XMPP Ping
             else if(QXmppPingIq::isPingIq(nodeRecv))
             {
@@ -859,31 +667,6 @@ void QXmppOutgoingClient::pingTimeout()
     warning("Ping timeout");
     QXmppStream::disconnectFromHost();
     emit error(QXmppClient::KeepAliveError);
-}
-
-void QXmppOutgoingClientPrivate::sendNonSASLAuth(bool plainText)
-{
-    QXmppNonSASLAuthIq authQuery;
-    authQuery.setType(QXmppIq::Set);
-    authQuery.setUsername(q->configuration().user());
-    if (plainText)
-        authQuery.setPassword(q->configuration().password());
-    else
-        authQuery.setDigest(streamId, q->configuration().password());
-    authQuery.setResource(q->configuration().resource());
-    nonSASLAuthId = authQuery.id();
-    q->sendPacket(authQuery);
-}
-
-void QXmppOutgoingClientPrivate::sendNonSASLAuthQuery()
-{
-    QXmppNonSASLAuthIq authQuery;
-    authQuery.setType(QXmppIq::Get);
-    authQuery.setTo(streamFrom);
-    // FIXME : why are we setting the username, XEP-0078 states we should
-    // not attempt to guess the required fields?
-    authQuery.setUsername(q->configuration().user());
-    q->sendPacket(authQuery);
 }
 
 void QXmppOutgoingClientPrivate::sendBind()

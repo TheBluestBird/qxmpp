@@ -50,17 +50,22 @@ class QXMPP_EXPORT QXmppOutgoingClient : public QXmppStream
 
 public:
     QXmppOutgoingClient(QObject *parent);
-    ~QXmppOutgoingClient() override;
+    ~QXmppOutgoingClient();
 
     void connectToHost();
-    bool isAuthenticated() const;
     bool isConnected() const override;
     bool isClientStateIndicationEnabled() const;
 
     QSslSocket *socket() const { return QXmppStream::socket(); };
+    void setXmppStreamError(QXmppStanza::Error::Condition error);
     QXmppStanza::Error::Condition xmppStreamError();
 
     QXmppConfiguration& configuration();
+
+    /// \cond
+    // Overridable methods
+    void handleStart() override;
+    /// \endcond
 
 signals:
     /// This signal is emitted when an error is encountered.
@@ -78,13 +83,15 @@ signals:
     /// This signal is emitted when an IQ is received.
     void iqReceived(const QXmppIq&);
 
+    /// This signal is emitted when a stream element is received.
+    void streamReceived(const QDomElement&);
+
     /// This signal is emitted when SSL errors are encountered.
     void sslErrors(const QList<QSslError> &errors);
 
 protected:
     /// \cond
     // Overridable methods
-    void handleStart() override;
     void handleStanza(const QDomElement &element) override;
     void handleStream(const QDomElement &element) override;
     /// \endcond

@@ -158,7 +158,9 @@ public:
     void startSocketEncryption();
 
     State state() const;
+
     QXmppStanza::Error::Condition xmppStreamError();
+    void setXmppStreamError(QXmppStanza::Error::Condition error);
 
     QXmppRosterManager& rosterManager();
     QXmppVCardManager& vCardManager();
@@ -219,6 +221,9 @@ signals:
     /// management, setting-getting vCards etc is done using iq stanzas.
     void iqReceived(const QXmppIq &iq);
 
+    /// Notifies that an XMPP stream element is received.
+    void streamReceived(const QDomElement &streamElement);
+
     /// This signal is emitted to indicate that one or more SSL errors were
     /// encountered while establishing the identity of the server.
     void sslErrors(const QList<QSslError> &errors);
@@ -235,6 +240,8 @@ public slots:
     void disconnectFromServer();
     bool sendPacket(const QXmppStanza&);
     void sendMessage(const QString& bareJid, const QString& message);
+    void sendStreamElement();
+    void handleConnectionError(QXmppClient::Error error);
 
 private slots:
     void _q_elementReceived(const QDomElement &element, bool &handled);
@@ -242,7 +249,6 @@ private slots:
     void _q_socketStateChanged(QAbstractSocket::SocketState state);
     void _q_streamConnected();
     void _q_streamDisconnected();
-    void _q_streamError(QXmppClient::Error error);
 
 private:
     QXmppClientPrivate * const d;

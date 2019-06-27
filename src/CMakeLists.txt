@@ -52,6 +52,7 @@ set(INSTALL_HEADER_FILES
     base/QXmppVersionIq.h
 
     # Client
+    client/QXmppAuthenticationManager.h
     client/QXmppArchiveManager.h
     client/QXmppBookmarkManager.h
     client/QXmppCallManager.h
@@ -134,6 +135,7 @@ set(SOURCE_FILES
     base/QXmppVersionIq.cpp
 
     # Client
+    client/QXmppAuthenticationManager.cpp
     client/QXmppDiscoveryManager.cpp
     client/QXmppArchiveManager.cpp
     client/QXmppBookmarkManager.cpp

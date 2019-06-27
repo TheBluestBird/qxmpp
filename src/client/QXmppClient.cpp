@@ -32,6 +32,7 @@
 #include "QXmppMessage.h"
 #include "QXmppUtils.h"
 
+#include "QXmppAuthenticationManager.h"
 #include "QXmppTlsManager.h"
 #include "QXmppRosterManager.h"
 #include "QXmppVCardManager.h"
@@ -49,6 +50,7 @@ public:
     QList<QXmppClientExtension*> extensions;
     QXmppLogger *logger;
     QXmppOutgoingClient *stream;                    ///< Pointer to the XMPP stream
+    QXmppAuthenticationManager *authenticationManager;
 
     // reconnection
     bool receivedConflict;
@@ -129,6 +131,9 @@ QXmppClient::QXmppClient(QObject *parent)
                     this, SIGNAL(iqReceived(QXmppIq)));
     Q_ASSERT(check);
 
+    connect(d->stream, &QXmppOutgoingClient::streamReceived,
+            this, &QXmppClient::streamReceived);
+
     check = connect(d->stream, SIGNAL(sslErrors(QList<QSslError>)),
                     this, SIGNAL(sslErrors(QList<QSslError>)));
     Q_ASSERT(check);
@@ -146,7 +151,7 @@ QXmppClient::QXmppClient(QObject *parent)
     Q_ASSERT(check);
 
     check = connect(d->stream, SIGNAL(error(QXmppClient::Error)),
-                    this, SLOT(_q_streamError(QXmppClient::Error)));
+                    this, SLOT(handleConnectionError(QXmppClient::Error)));
     Q_ASSERT(check);
 
     // reconnection
@@ -159,7 +164,12 @@ QXmppClient::QXmppClient(QObject *parent)
     // logging
     setLogger(QXmppLogger::getLogger());
 
+    d->authenticationManager = new QXmppAuthenticationManager;
+    connect(d->authenticationManager, &QXmppAuthenticationManager::authenticated,
+            d->stream, &QXmppOutgoingClient::handleAuthenticated);
+
     addExtension(new QXmppTlsManager);
+    addExtension(d->authenticationManager);
     addExtension(new QXmppRosterManager(this));
     addExtension(new QXmppVCardManager);
     addExtension(new QXmppVersionManager);
@@ -315,7 +325,7 @@ void QXmppClient::disconnectFromServer()
 
 bool QXmppClient::isAuthenticated() const
 {
-    return d->stream->isAuthenticated();
+    return d->authenticationManager->isAuthenticated();
 }
 
 /// Returns true if the client is connected to the XMPP server.
@@ -377,6 +387,14 @@ void QXmppClient::sendMessage(const QString& bareJid, const QString& message)
     {
         sendPacket(QXmppMessage("", bareJid, message));
     }
+}
+
+/// Sends a new stream element to the server. This is useful for
+/// authentication. Use this only if you know what you do.
+
+void QXmppClient::sendStreamElement()
+{
+    d->stream->handleStart();
 }
 
 /// Returns the client's current state.
@@ -475,6 +493,11 @@ QXmppStanza::Error::Condition QXmppClient::xmppStreamError()
     return d->stream->xmppStreamError();
 }
 
+void QXmppClient::setXmppStreamError(QXmppStanza::Error::Condition error)
+{
+    d->stream->setXmppStreamError(error);
+}
+
 /// Returns the reference to QXmppVCardManager, implementation of XEP-0054.
 /// http://xmpp.org/extensions/xep-0054.html
 ///
@@ -536,7 +559,7 @@ void QXmppClient::_q_streamConnected()
     emit stateChanged(QXmppClient::ConnectedState);
 
     // send initial presence
-    if (d->stream->isAuthenticated())
+    if (isAuthenticated())
         sendPacket(d->clientPresence);
 }
 
@@ -547,7 +570,7 @@ void QXmppClient::_q_streamDisconnected()
     emit stateChanged(QXmppClient::DisconnectedState);
 }
 
-void QXmppClient::_q_streamError(QXmppClient::Error err)
+void QXmppClient::handleConnectionError(QXmppClient::Error err)
 {
     if (d->stream->configuration().autoReconnectionEnabled()) {
         if (err == QXmppClient::XmppStreamError) {
