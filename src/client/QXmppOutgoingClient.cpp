@@ -415,38 +415,24 @@ void QXmppOutgoingClient::handleStanza(const QDomElement &nodeRecv)
         QXmppStreamFeatures features;
         features.parse(nodeRecv);
 
-        if(features.clientStateIndicationMode() == QXmppStreamFeatures::Enabled)
+        if (features.clientStateIndicationMode() == QXmppStreamFeatures::Enabled)
             d->clientStateIndicationEnabled = true;
 
-        if (!socket()->isEncrypted())
-        {
-            // determine TLS mode to use
-            const QXmppConfiguration::StreamSecurityMode localSecurity = configuration().streamSecurityMode();
-            const QXmppStreamFeatures::Mode remoteSecurity = features.tlsMode();
-            if (!socket()->supportsSsl() &&
-                (localSecurity == QXmppConfiguration::TLSRequired ||
-                 remoteSecurity == QXmppStreamFeatures::Required))
-            {
-                warning("Disconnecting as TLS is required, but SSL support is not available");
-                disconnectFromHost();
-                return;
-            }
-            if (localSecurity == QXmppConfiguration::TLSRequired &&
-                remoteSecurity == QXmppStreamFeatures::Disabled)
-            {
-                warning("Disconnecting as TLS is required, but not supported by the server");
+        // registration without login
+        if (d->config.registerOnly()) {
+            if (features.registerMode() == QXmppStreamFeatures::Disabled) {
+                emit error(QXmppClient::RegistrationUnsupportedError);
+                warning("Disconnecting because registration was requested, but the"
+                        " server does not support it.");
                 disconnectFromHost();
                 return;
             }
 
-            if (socket()->supportsSsl() &&
-                localSecurity != QXmppConfiguration::TLSDisabled &&
-                remoteSecurity != QXmppStreamFeatures::Disabled)
-            {
-                // enable TLS as it is support by both parties
-                sendData("<starttls xmlns='urn:ietf:params:xml:ns:xmpp-tls'/>");
-                return;
-            }
+            // send request to register
+            QXmppRegisterIq iq;
+            iq.setType(QXmppIq::Get);
+            sendPacket(iq);
+            return;
         }
 
         // handle authentication
@@ -570,15 +556,6 @@ void QXmppOutgoingClient::handleStanza(const QDomElement &nodeRecv)
         else
             d->xmppStreamError = QXmppStanza::Error::UndefinedCondition;
         emit error(QXmppClient::XmppStreamError);
-    }
-    else if(ns == ns_tls)
-    {
-        if(nodeRecv.tagName() == "proceed")
-        {
-            debug("Starting encryption");
-            socket()->startClientEncryption();
-            return;
-        }
     }
     else if(ns == ns_sasl)
     {

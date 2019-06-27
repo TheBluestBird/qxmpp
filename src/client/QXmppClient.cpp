@@ -32,6 +32,7 @@
 #include "QXmppMessage.h"
 #include "QXmppUtils.h"
 
+#include "QXmppTlsManager.h"
 #include "QXmppRosterManager.h"
 #include "QXmppVCardManager.h"
 #include "QXmppVersionManager.h"
@@ -158,6 +159,7 @@ QXmppClient::QXmppClient(QObject *parent)
     // logging
     setLogger(QXmppLogger::getLogger());
 
+    addExtension(new QXmppTlsManager);
     addExtension(new QXmppRosterManager(this));
     addExtension(new QXmppVCardManager);
     addExtension(new QXmppVersionManager);
@@ -448,6 +450,21 @@ QAbstractSocket::SocketError QXmppClient::socketError()
 QString QXmppClient::socketErrorString() const
 {
     return d->stream->socket()->errorString();
+}
+
+bool QXmppClient::socketSupportsSsl() const
+{
+    return d->stream->socket()->supportsSsl();
+}
+
+bool QXmppClient::isSocketEncrypted() const
+{
+    return d->stream->socket()->isEncrypted();
+}
+
+void QXmppClient::startSocketEncryption()
+{
+    d->stream->socket()->startClientEncryption();
 }
 
 /// Returns the XMPP stream error if QXmppClient::Error is QXmppClient::XmppStreamError.
