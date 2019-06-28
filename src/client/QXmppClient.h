@@ -112,6 +112,30 @@ public:
     bool insertExtension(int index, QXmppClientExtension* extension);
     bool removeExtension(QXmppClientExtension* extension);
 
+    /// \brief Returns the index of an extension
+    ///
+    /// Usage example:
+    /// \code
+    /// int index = client->indexOfExtension<QXmppDiscoveryManager>();
+    /// if (index > 0) {
+    ///     // extension found, do stuff...
+    /// } else {
+    ///     // extension not found
+    /// }
+    /// \endcode
+    ///
+    template<typename T>
+    int indexOfExtension()
+    {
+        int index = -1;
+        auto list = extensions();
+        for (int i = 0; i < list.size(); ++i) {
+            if (qobject_cast<T*>(list.at(i)) != nullptr)
+                index = i;
+        }
+        return index;
+    }
+
     QList<QXmppClientExtension*> extensions();
 
     /// \brief Returns the extension which can be cast into type T*, or 0
