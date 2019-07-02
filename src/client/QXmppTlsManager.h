@@ -29,6 +29,8 @@
 
 class QXmppTlsManager : public QXmppClientExtension
 {
+    Q_OBJECT
+
 public:
     QXmppTlsManager();
 

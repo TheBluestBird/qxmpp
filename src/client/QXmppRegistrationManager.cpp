@@ -27,6 +27,7 @@
 #include "QXmppClient.h"
 #include "QXmppConstants_p.h"
 #include "QXmppDiscoveryManager.h"
+#include "QXmppStreamFeatures.h"
 #include "QXmppRegisterIq.h"
 #include "QXmppUtils.h"
 
@@ -62,7 +63,7 @@ void QXmppRegistrationManager::setClient(QXmppClient *client)
 	QXmppClientExtension::setClient(client);
 	// get service discovery manager
 	auto *disco = client->findExtension<QXmppDiscoveryManager>();
-	if (disco) {
+    if (disco != nullptr) {
 		connect(disco, &QXmppDiscoveryManager::infoReceived,
 		        this, &QXmppRegistrationManager::handleDiscoInfo);
 
@@ -83,28 +84,52 @@ void QXmppRegistrationManager::handleDiscoInfo(const QXmppDiscoveryIq &iq)
 
 bool QXmppRegistrationManager::handleStanza(const QDomElement &stanza)
 {
-//	if (QXmppRegisterIq::isRegisterIq(stanza)) {
-//		QXmppRegisterIq iq;
-//		iq.parse(stanza);
-//	}
-    if (stanza.tagName() == "iq" && stanza.attribute("id") == m_changePasswordIqId) {
-        QXmppIq iq;
-        iq.parse(stanza);
+    if (client()->configuration().registerOnly() && QXmppStreamFeatures::isStreamFeatures(stanza)) {
+        QXmppStreamFeatures features;
+        features.parse(stanza);
 
-        if (iq.type() == QXmppIq::Result) {
-            // Success
-            client()->configuration().setPassword(m_newPassword);
-            emit passwordChanged(m_newPassword);
-            m_changePasswordIqId = QString();
-            m_newPassword = QString();
+        if (features.registerMode() == QXmppStreamFeatures::Disabled) {
+            client()->handleConnectionError(QXmppClient::RegistrationUnsupportedError);
+            warning("Disconnecting because registration was requested, but the"
+                    " server does not support it.");
+            client()->disconnectFromServer();
             return true;
-        } else if (iq.type() == QXmppIq::Error) {
-            // Error
-            emit passwordChangeFailed(iq.error());
-            warning(QString("Failed to change password: %1").arg(iq.error().text()));
-            m_changePasswordIqId = QString();
-            m_newPassword = QString();
-            return true;
+        }
+
+        // send request to register
+        QXmppRegisterIq iq;
+        iq.setType(QXmppIq::Get);
+        client()->sendPacket(iq);
+        return true;
+    }
+
+    if (stanza.tagName() == "iq") {
+        if (QXmppRegisterIq::isRegisterIq(stanza)) {
+            QXmppRegisterIq iq;
+            iq.parse(stanza);
+
+            emit registrationFormReceived(iq);
+        } else if (stanza.attribute("id") == m_changePasswordIqId) {
+            QXmppIq iq;
+            iq.parse(stanza);
+
+            if (iq.type() == QXmppIq::Result) {
+                // Success
+                client()->configuration().setPassword(m_newPassword);
+                emit passwordChanged(m_newPassword);
+                m_changePasswordIqId = QString();
+                m_newPassword = QString();
+                return true;
+            }
+
+            if (iq.type() == QXmppIq::Error) {
+                // Error
+                emit passwordChangeFailed(iq.error());
+                warning(QString("Failed to change password: %1").arg(iq.error().text()));
+                m_changePasswordIqId = QString();
+                m_newPassword = QString();
+                return true;
+            }
         }
     }
     return false;

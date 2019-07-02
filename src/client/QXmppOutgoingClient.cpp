@@ -374,30 +374,12 @@ void QXmppOutgoingClient::handleStanza(const QDomElement &nodeRecv)
     if (handled)
         return;
 
-    if (QXmppStreamFeatures::isStreamFeatures(nodeRecv))
-    {
+    if (QXmppStreamFeatures::isStreamFeatures(nodeRecv)) {
         QXmppStreamFeatures features;
         features.parse(nodeRecv);
 
         if (features.clientStateIndicationMode() == QXmppStreamFeatures::Enabled)
             d->clientStateIndicationEnabled = true;
-
-        // registration without login
-        if (d->config.registerOnly()) {
-            if (features.registerMode() == QXmppStreamFeatures::Disabled) {
-                emit error(QXmppClient::RegistrationUnsupportedError);
-                warning("Disconnecting because registration was requested, but the"
-                        " server does not support it.");
-                disconnectFromHost();
-                return;
-            }
-
-            // send request to register
-            QXmppRegisterIq iq;
-            iq.setType(QXmppIq::Get);
-            sendPacket(iq);
-            return;
-        }
 
         // store which features are available
         d->sessionAvailable = (features.sessionMode() != QXmppStreamFeatures::Disabled);

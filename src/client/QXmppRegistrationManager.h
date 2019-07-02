@@ -26,6 +26,7 @@
 #define QXMPPREGISTRATIONMANAGER_H
 
 #include "QXmppClientExtension.h"
+class QXmppRegisterIq;
 
 class QXmppRegistrationManager : public QXmppClientExtension
 {
@@ -43,9 +44,12 @@ public:
     bool registrationSupported() const;
 
 signals:
+    void registrationSupportedChanged();
+
     void passwordChanged(const QString &newPassword);
     void passwordChangeFailed(const QXmppStanza::Error &error);
-    void registrationSupportedChanged();
+
+    void registrationFormReceived(const QXmppRegisterIq &iq);
 
 protected:
     void setClient(QXmppClient *client) override;
