@@ -42,6 +42,7 @@ public:
     void changePassword(const QString &newPassword);
 
     bool registrationSupported() const;
+    void sendRegistrationForm(QXmppDataForm dataForm);
 
 signals:
     void registrationSupportedChanged();
@@ -50,6 +51,7 @@ signals:
     void passwordChangeFailed(const QXmppStanza::Error &error);
 
     void registrationFormReceived(const QXmppRegisterIq &iq);
+    void registrationSucceeded();
 
 protected:
     void setClient(QXmppClient *client) override;
@@ -66,6 +68,8 @@ private:
     // caching
     QString m_changePasswordIqId;
     QString m_newPassword;
+
+    QString m_registrationId;
 };
 
 #endif // QXMPPREGISTRATIONMANAGER_H

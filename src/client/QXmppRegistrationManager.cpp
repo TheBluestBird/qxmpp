@@ -40,7 +40,7 @@ QStringList QXmppRegistrationManager::discoveryFeatures() const
 
 /// Changes the user's password
 ///
-/// @param newPassword The requested new password
+/// \param newPassword The requested new password
 
 void QXmppRegistrationManager::changePassword(const QString &newPassword)
 {
@@ -109,6 +109,14 @@ bool QXmppRegistrationManager::handleStanza(const QDomElement &stanza)
             iq.parse(stanza);
 
             emit registrationFormReceived(iq);
+        } else if (stanza.attribute("id") == m_registrationId) {
+            QXmppIq iq;
+            iq.parse(stanza);
+            if (iq.type() == QXmppIq::Result) {
+                emit registrationSucceeded();
+                return true;
+            }
+            // TODO: error cases
         } else if (stanza.attribute("id") == m_changePasswordIqId) {
             QXmppIq iq;
             iq.parse(stanza);
@@ -137,7 +145,19 @@ bool QXmppRegistrationManager::handleStanza(const QDomElement &stanza)
 
 bool QXmppRegistrationManager::registrationSupported() const
 {
-	return m_registrationSupported;
+    return m_registrationSupported;
+}
+
+void QXmppRegistrationManager::sendRegistrationForm(QXmppDataForm dataForm)
+{
+    QXmppRegisterIq iq;
+    iq.setType(QXmppIq::Set);
+    iq.setTo(client()->configuration().domain());
+    dataForm.setType(QXmppDataForm::Submit);
+    iq.setForm(dataForm);
+
+    client()->sendPacket(iq);
+    m_registrationId = iq.id();
 }
 
 void QXmppRegistrationManager::setRegistrationSupported(bool registrationSupported)
