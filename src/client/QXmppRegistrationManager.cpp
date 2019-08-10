@@ -27,8 +27,8 @@
 #include "QXmppClient.h"
 #include "QXmppConstants_p.h"
 #include "QXmppDiscoveryManager.h"
-#include "QXmppStreamFeatures.h"
 #include "QXmppRegisterIq.h"
+#include "QXmppStreamFeatures.h"
 #include "QXmppUtils.h"
 
 #include <QDomElement>
@@ -44,7 +44,7 @@ QStringList QXmppRegistrationManager::discoveryFeatures() const
 
 void QXmppRegistrationManager::changePassword(const QString &newPassword)
 {
-    m_changePasswordIqId = QXmppUtils::generateStanzaHash(24);
+	m_changePasswordIqId = QXmppUtils::generateStanzaHash(24);
 	m_newPassword = newPassword;
 
 	QXmppRegisterIq iq;
@@ -53,7 +53,7 @@ void QXmppRegistrationManager::changePassword(const QString &newPassword)
 	iq.setFrom(client()->configuration().jid());
 	iq.setUsername(QXmppUtils::jidToUser(client()->configuration().jid()));
 	iq.setPassword(newPassword);
-    iq.setId(m_changePasswordIqId);
+	iq.setId(m_changePasswordIqId);
 
 	client()->sendPacket(iq);
 }
@@ -84,7 +84,7 @@ void QXmppRegistrationManager::handleDiscoInfo(const QXmppDiscoveryIq &iq)
 
 bool QXmppRegistrationManager::handleStanza(const QDomElement &stanza)
 {
-    if (client()->configuration().registerOnly() && QXmppStreamFeatures::isStreamFeatures(stanza)) {
+    if (m_registrationEnabled && QXmppStreamFeatures::isStreamFeatures(stanza)) {
         QXmppStreamFeatures features;
         features.parse(stanza);
 
@@ -96,27 +96,28 @@ bool QXmppRegistrationManager::handleStanza(const QDomElement &stanza)
             return true;
         }
 
-        // send request to register
-        QXmppRegisterIq iq;
-        iq.setType(QXmppIq::Get);
-        client()->sendPacket(iq);
-        return true;
+		if (!m_registrationFormToSend.isNull()) {
+			sendRegistrationForm();
+			return true;
+		}
+
+		// send request to register
+		requestRegistrationForm();
+		return true;
     }
 
     if (stanza.tagName() == "iq") {
-        if (QXmppRegisterIq::isRegisterIq(stanza)) {
-            QXmppRegisterIq iq;
-            iq.parse(stanza);
-
-            emit registrationFormReceived(iq);
-        } else if (stanza.attribute("id") == m_registrationId) {
+		if (stanza.attribute("id") == m_registrationId) {
             QXmppIq iq;
             iq.parse(stanza);
             if (iq.type() == QXmppIq::Result) {
                 emit registrationSucceeded();
                 return true;
             }
-            // TODO: error cases
+			if (iq.type() == QXmppIq::Error) {
+				emit registrationFailed(iq.error());
+				return true;
+			}
         } else if (stanza.attribute("id") == m_changePasswordIqId) {
             QXmppIq iq;
             iq.parse(stanza);
@@ -138,26 +139,32 @@ bool QXmppRegistrationManager::handleStanza(const QDomElement &stanza)
                 m_newPassword = QString();
                 return true;
             }
-        }
+		} else if (QXmppRegisterIq::isRegisterIq(stanza)) {
+			QXmppRegisterIq iq;
+			iq.parse(stanza);
+
+			emit registrationFormReceived(iq);
+		}
     }
     return false;
 }
 
 bool QXmppRegistrationManager::registrationSupported() const
 {
-    return m_registrationSupported;
+	return m_registrationSupported;
 }
 
-void QXmppRegistrationManager::sendRegistrationForm(QXmppDataForm dataForm)
+void QXmppRegistrationManager::requestRegistrationForm(const QString &service)
 {
-    QXmppRegisterIq iq;
-    iq.setType(QXmppIq::Set);
-    iq.setTo(client()->configuration().domain());
-    dataForm.setType(QXmppDataForm::Submit);
-    iq.setForm(dataForm);
+	QXmppRegisterIq iq;
+	iq.setType(QXmppIq::Get);
+	iq.setTo(service);
+	client()->sendPacket(iq);
+}
 
-    client()->sendPacket(iq);
-    m_registrationId = iq.id();
+void QXmppRegistrationManager::setRegistrationFormToSend(const QXmppDataForm &dataForm)
+{
+	m_registrationFormToSend = dataForm;
 }
 
 void QXmppRegistrationManager::setRegistrationSupported(bool registrationSupported)
@@ -166,4 +173,37 @@ void QXmppRegistrationManager::setRegistrationSupported(bool registrationSupport
 		m_registrationSupported = registrationSupported;
 		emit registrationSupportedChanged();
 	}
+}
+
+void QXmppRegistrationManager::sendRegistrationForm()
+{
+	m_registrationFormToSend.setType(QXmppDataForm::Submit);
+
+	QXmppRegisterIq iq;
+	iq.setType(QXmppIq::Set);
+	iq.setTo(client()->configuration().domain());
+	iq.setForm(m_registrationFormToSend);
+
+	client()->sendPacket(iq);
+	m_registrationId = iq.id();
+
+	m_registrationFormToSend = QXmppDataForm();
+}
+
+/// Returns whether to only request the registration form and not to connect
+/// with username/password.
+
+bool QXmppRegistrationManager::registrationEnabled() const
+{
+    return m_registrationEnabled;
+}
+
+/// Sets whether to only request the registration form and not to connect with
+/// username/password.
+///
+/// \param registrationEnabled true to register, false to connect normally.
+
+void QXmppRegistrationManager::setRegistrationEnabled(bool enabled)
+{
+	m_registrationEnabled = enabled;
 }

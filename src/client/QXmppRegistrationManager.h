@@ -42,7 +42,12 @@ public:
     void changePassword(const QString &newPassword);
 
     bool registrationSupported() const;
-    void sendRegistrationForm(QXmppDataForm dataForm);
+
+	void requestRegistrationForm(const QString &service = "");
+	void setRegistrationFormToSend(const QXmppDataForm &dataForm);
+
+    bool registrationEnabled() const;
+    void setRegistrationEnabled(bool enabled);
 
 signals:
     void registrationSupportedChanged();
@@ -53,6 +58,22 @@ signals:
     void registrationFormReceived(const QXmppRegisterIq &iq);
     void registrationSucceeded();
 
+    /// Emitted when the registration failed
+    ///
+    /// \note The errors depend on the server.
+    ///       Known errors are:
+    ///       \li type=Cancel and condition=Conflict:
+    ///           username already exists
+    ///       \li type=Modify and condition=NotAcceptable:
+    ///           required information was missing
+    ///           or password too weak
+    ///       \li type=Cancel and condition=NotAllowed:
+    ///           CAPTCHA verification failed
+    ///
+    /// \param error error of the failed registration.
+    ///
+    void registrationFailed(const QXmppStanza::Error &error);
+
 protected:
     void setClient(QXmppClient *client) override;
 
@@ -62,7 +83,9 @@ private slots:
 private:
     bool handleStanza(const QDomElement &stanza) override;
     void setRegistrationSupported(bool registrationSupported);
+	void sendRegistrationForm();
 
+    bool m_registrationEnabled = false;
     bool m_registrationSupported = false;
 
     // caching
@@ -70,6 +93,8 @@ private:
     QString m_newPassword;
 
     QString m_registrationId;
+
+	QXmppDataForm m_registrationFormToSend;
 };
 
 #endif // QXMPPREGISTRATIONMANAGER_H

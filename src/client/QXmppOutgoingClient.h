@@ -98,6 +98,7 @@ protected:
 
 public slots:
     void disconnectFromHost() override;
+    void handleAuthenticated();
 
 private slots:
     void _q_dnsLookupFinished();

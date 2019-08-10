@@ -39,8 +39,6 @@ public:
     QString domain;
     QString resource;
 
-    bool registerOnly;
-
     // Facebook
     QString facebookAccessToken;
     QString facebookAppId;
@@ -81,7 +79,6 @@ public:
 QXmppConfigurationPrivate::QXmppConfigurationPrivate()
     : port(5222)
     , resource("QXmpp")
-    , registerOnly(false)
     , autoAcceptSubscriptions(false)
     , sendIntialPresence(true)
     , sendRosterRequest(true)
@@ -299,25 +296,6 @@ QString QXmppConfiguration::jidBare() const
         return d->domain;
     else
         return d->user+"@"+d->domain;
-}
-
-/// Returns whether to only request the registration form and not to connect
-/// with username/password.
-
-
-bool QXmppConfiguration::registerOnly() const
-{
-    return d->registerOnly;
-}
-
-/// Sets whether to only request the registration form and not to connect with
-/// username/password.
-///
-/// \param registerOnly
-
-void QXmppConfiguration::setRegisterOnly(bool registerOnly)
-{
-    d->registerOnly = registerOnly;
 }
 
 /// Returns the access token used for X-FACEBOOK-PLATFORM authentication.

@@ -102,9 +102,6 @@ public:
 
     QString jidBare() const;
 
-    bool registerOnly() const;
-    void setRegisterOnly(bool);
-
     QString facebookAccessToken() const;
     void setFacebookAccessToken(const QString&);
 
