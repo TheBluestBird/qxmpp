@@ -13,8 +13,10 @@ set(INSTALL_HEADER_FILES
     # Base
     base/QXmppArchiveIq.h
     base/QXmppBindIq.h
+    base/QXmppBobContentId.h
     base/QXmppBookmarkSet.h
     base/QXmppByteStreamIq.h
+    base/QXmppHash.h
     base/QXmppDataForm.h
     base/QXmppDiscoveryIq.h
     base/QXmppElement.h
@@ -88,8 +90,10 @@ set(SOURCE_FILES
     # Base
     base/QXmppArchiveIq.cpp
     base/QXmppBindIq.cpp
+    base/QXmppBobContentId.cpp
     base/QXmppBookmarkSet.cpp
     base/QXmppByteStreamIq.cpp
+    base/QXmppHash.cpp
     base/QXmppCodec.cpp
     base/QXmppConstants.cpp
     base/QXmppDataForm.cpp
