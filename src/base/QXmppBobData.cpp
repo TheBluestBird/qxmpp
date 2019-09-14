@@ -21,25 +21,20 @@
  *
  */
 
-#include "QXmppHash.h"
+#include "QXmppBobData.h"
 
 #include <QSharedData>
 
-class QXmppHashPrivate : public QSharedData
+class QXmppBobDataPrivate : public QSharedData
 {
 public:
-    QXmppHashPrivate() = default;
-    QXmppHashPrivate(const QXmppHashPrivate &other) = default;
-    ~QXmppHashPrivate() = default;
-
-    QByteArray hash;
+    QXmppBobContentId cid;
+    unsigned int maxAge = 0;
+    QMimeType contentType;
+    QByteArray data;
 };
 
-QXmppHash::QXmppHash()
+QXmppBobData::QXmppBobData()
 {
-    d = new QXmppHashPrivate;
+
 }
-
-QXmppHash::QXmppHash(const QXmppHash &other) = default;
-
-QXmppHash::~QXmppHash() = default;

@@ -24,7 +24,7 @@
 #ifndef QXMPPBOBCONTENTID_H
 #define QXMPPBOBCONTENTID_H
 
-//#include <QSharedDataPointer>
+#include <QSharedDataPointer>
 #include <QCryptographicHash>
 
 class QXmppBobContentIdPrivate;
@@ -33,13 +33,14 @@ class QXmppBobContentId
 {
 public:
     static QXmppBobContentId fromCidUrl(const QString &input);
-    static QXmppBobContentId fromContenId(const QString &input);
+    static QXmppBobContentId fromContentId(const QString &input);
 
     QXmppBobContentId();
-//    QXmppBobContentId(const QXmppBobContentId &cid);
+    QXmppBobContentId(const QXmppBobContentId &cid);
     ~QXmppBobContentId();
 
-//    QXmppBobContentId& operator=(const QXmppBobContentId &other);
+    QXmppBobContentId& operator=(const QXmppBobContentId &other);
+    bool operator==(const QXmppBobContentId &other) const;
 
     QString toContentId() const;
     QString toCidUrl() const;
@@ -51,8 +52,7 @@ public:
     void setAlgorithm(QCryptographicHash::Algorithm algo);
 
 private:
-//    QSharedDataPointer<QXmppBobContentIdPrivate> d;
-    QXmppBobContentIdPrivate *d;
+    QSharedDataPointer<QXmppBobContentIdPrivate> d;
 };
 
 #endif // QXMPPBOBCONTENTID_H

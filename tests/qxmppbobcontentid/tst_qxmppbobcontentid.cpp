@@ -2,8 +2,7 @@
  * Copyright (C) 2008-2019 The QXmpp developers
  *
  * Authors:
- *  Jeremy Lainé
- *  Manjeet Dahiya
+ *  Linus Jahn
  *
  * Source:
  *  https://github.com/qxmpp-project/qxmpp
@@ -33,18 +32,45 @@ class tst_QXmppBobContentId : public QObject
 
 private slots:
     void testBasic();
+    void testEmpty();
 };
 
 void tst_QXmppBobContentId::testBasic()
 {
-    qDebug() << "Moinsen";
+    // test fromCidUrl()
     QXmppBobContentId cid = QXmppBobContentId::fromCidUrl(
         QStringLiteral("cid:sha1+8f35fef110ffc5df08d579a50083ff9308fb6242@bob.xmpp.org"));
 
-    qDebug() << "Schmoinsen";
     QCOMPARE(cid.algorithm(), QCryptographicHash::Sha1);
     QCOMPARE(cid.hash().toHex(), QByteArrayLiteral("8f35fef110ffc5df08d579a50083ff9308fb6242"));
-    qDebug() << "feddig";
+    QCOMPARE(cid.toCidUrl(), QStringLiteral("cid:sha1+8f35fef110ffc5df08d579a50083ff9308fb6242@bob.xmpp.org"));
+    QCOMPARE(cid.toContentId(), QStringLiteral("sha1+8f35fef110ffc5df08d579a50083ff9308fb6242@bob.xmpp.org"));
+
+    // test fromContentId()
+    cid = QXmppBobContentId::fromContentId(QStringLiteral(
+            "sha1+8f35fef110ffc5df08d579a50083ff9308fb6242@bob.xmpp.org"));
+
+    QCOMPARE(cid.algorithm(), QCryptographicHash::Sha1);
+    QCOMPARE(cid.hash().toHex(), QByteArrayLiteral("8f35fef110ffc5df08d579a50083ff9308fb6242"));
+    QCOMPARE(cid.toCidUrl(), QStringLiteral("cid:sha1+8f35fef110ffc5df08d579a50083ff9308fb6242@bob.xmpp.org"));
+    QCOMPARE(cid.toContentId(), QStringLiteral("sha1+8f35fef110ffc5df08d579a50083ff9308fb6242@bob.xmpp.org"));
+
+    // test setters
+    cid = QXmppBobContentId();
+    cid.setHash(QByteArray::fromHex(QByteArrayLiteral("8f35fef110ffc5df08d579a50083ff9308fb6242")));
+    cid.setAlgorithm(QCryptographicHash::Sha1);
+
+    QCOMPARE(cid.algorithm(), QCryptographicHash::Sha1);
+    QCOMPARE(cid.hash().toHex(), QByteArrayLiteral("8f35fef110ffc5df08d579a50083ff9308fb6242"));
+    QCOMPARE(cid.toCidUrl(), QStringLiteral("cid:sha1+8f35fef110ffc5df08d579a50083ff9308fb6242@bob.xmpp.org"));
+    QCOMPARE(cid.toContentId(), QStringLiteral("sha1+8f35fef110ffc5df08d579a50083ff9308fb6242@bob.xmpp.org"));
+}
+
+void tst_QXmppBobContentId::testEmpty()
+{
+    QXmppBobContentId cid;
+    QVERIFY(cid.toCidUrl().isEmpty());
+    QVERIFY(cid.toContentId().isEmpty());
 }
 
 QTEST_MAIN(tst_QXmppBobContentId)

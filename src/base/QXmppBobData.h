@@ -21,25 +21,30 @@
  *
  */
 
-#include "QXmppHash.h"
+#ifndef QXMPPBOBDATA_H
+#define QXMPPBOBDATA_H
 
-#include <QSharedData>
+#include <QSharedDataPointer>
 
-class QXmppHashPrivate : public QSharedData
+#include "QXmppBobContentId.h"
+
+class QDomElement;
+class QXmlStreamWriter;
+class QXmppBobDataPrivate;
+
+class QXmppBobData
 {
 public:
-    QXmppHashPrivate() = default;
-    QXmppHashPrivate(const QXmppHashPrivate &other) = default;
-    ~QXmppHashPrivate() = default;
+    QXmppBobData();
 
-    QByteArray hash;
+protected:
+    /// \cond
+    virtual void parseElementFromChild(const QDomElement &element);
+    virtual void toXmlElementFromChild(QXmlStreamWriter *writer) const;
+    /// \endcond
+
+private:
+    QSharedDataPointer<QXmppBobDataPrivate> d;
 };
 
-QXmppHash::QXmppHash()
-{
-    d = new QXmppHashPrivate;
-}
-
-QXmppHash::QXmppHash(const QXmppHash &other) = default;
-
-QXmppHash::~QXmppHash() = default;
+#endif // QXMPPBOBDATA_H

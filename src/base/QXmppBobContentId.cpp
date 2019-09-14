@@ -23,12 +23,10 @@
 
 #include "QXmppBobContentId.h"
 
-#include <QChar>
-#include <QCryptographicHash>
+#include <QSharedData>
 #include <QString>
 
-//class QXmppBobContentIdPrivate : QSharedData
-class QXmppBobContentIdPrivate
+class QXmppBobContentIdPrivate : public QSharedData
 {
 public:
     QCryptographicHash::Algorithm hashAlgo;
@@ -38,11 +36,11 @@ public:
 QXmppBobContentId QXmppBobContentId::fromCidUrl(const QString &input)
 {
     if (input.startsWith(QStringLiteral("cid:")))
-        return fromContenId(input.mid(4));
+        return fromContentId(input.mid(4));
     return {};
 }
 
-QXmppBobContentId QXmppBobContentId::fromContenId(const QString &input)
+QXmppBobContentId QXmppBobContentId::fromContentId(const QString &input)
 {
     if (!input.endsWith(QStringLiteral("@bob.xmpp.org")))
         return {};
@@ -50,23 +48,22 @@ QXmppBobContentId QXmppBobContentId::fromContenId(const QString &input)
     // remove '@bob.xmpp.org'
     QString hashAndAlgoStr = input.left(input.size() - 13);
     // get size of hash algo id
-    int hashAlgoLeft = 0;
-    for (int i = 0; i < hashAndAlgoStr.size() && hashAndAlgoStr.at(i) != "+"; i++)
-        hashAlgoLeft++;
+    QStringList algoAndHash = hashAndAlgoStr.split(QStringLiteral("+"));
+    if (algoAndHash.size() != 2)
+        return {};
 
     QXmppBobContentId cid;
 
-    QString hashAlgo = hashAndAlgoStr.left(hashAlgoLeft);
-    if (hashAlgo == QStringLiteral("sha1"))
+    if (algoAndHash.first() == QStringLiteral("sha1"))
         cid.setAlgorithm(QCryptographicHash::Sha1);
-    else if (hashAlgo == QStringLiteral("sha256"))
+    else if (algoAndHash.first() == QStringLiteral("sha256"))
         cid.setAlgorithm(QCryptographicHash::Sha256);
-    else if (hashAlgo == QStringLiteral("sha3-256"))
+    else if (algoAndHash.first() == QStringLiteral("sha3-256"))
         cid.setAlgorithm(QCryptographicHash::Sha3_256);
     else
         return {};
 
-    cid.setHash(QByteArray::fromHex(hashAndAlgoStr.mid(hashAlgoLeft).toUtf8()));
+    cid.setHash(QByteArray::fromHex(algoAndHash.last().toUtf8()));
     return cid;
 }
 
@@ -75,13 +72,22 @@ QXmppBobContentId::QXmppBobContentId()
 {
 }
 
-QXmppBobContentId::~QXmppBobContentId()
+bool QXmppBobContentId::operator==(const QXmppBobContentId &other) const
 {
-    delete d;
+    return d == other.d;
 }
+
+QXmppBobContentId::~QXmppBobContentId() = default;
+
+QXmppBobContentId::QXmppBobContentId(const QXmppBobContentId &cid) = default;
+
+QXmppBobContentId &QXmppBobContentId::operator=(const QXmppBobContentId &other) = default;
 
 QString QXmppBobContentId::toContentId() const
 {
+    if (d->hash.isEmpty())
+        return {};
+
     QString output;
     switch (d->hashAlgo) {
     case QCryptographicHash::Sha1:
@@ -94,33 +100,21 @@ QString QXmppBobContentId::toContentId() const
         output += QStringLiteral("sha3-256");
         break;
     default:
-        return output;
+        return {};
     };
 
     output += QStringLiteral("+");
-
-
-
+    output += d->hash.toHex();
+    output += QStringLiteral("@bob.xmpp.org");
     return output;
 }
 
 QString QXmppBobContentId::toCidUrl() const
 {
+    if (d->hash.isEmpty())
+        return {};
     return QStringLiteral("cid:") + toContentId();
 }
-
-/*
-QXmppBobContentId::QXmppBobContentId(const QXmppBobContentId &cid)
-    : d(cid.d)
-{
-}
-
-QXmppBobContentId &QXmppBobContentId::operator=(const QXmppBobContentId &other)
-{
-    d = other.d;
-    return *this;
-}
-*/
 
 QByteArray QXmppBobContentId::hash() const
 {
