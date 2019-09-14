@@ -21,7 +21,6 @@
  *
  */
 
-#include <QDebug>
 #include <QDomElement>
 #include <QSize>
 #include <QStringList>
@@ -433,6 +432,7 @@ bool QXmppDataForm::isNull() const
 }
 
 /// \cond
+#include "QXmppLogger.h"
 void QXmppDataForm::parse(const QDomElement &element)
 {
     if (element.isNull())
@@ -440,18 +440,17 @@ void QXmppDataForm::parse(const QDomElement &element)
 
     /* form type */
     const QString typeStr = element.attribute("type");
-    if (typeStr == "form")
+	if (typeStr == "form") {
         d->type = QXmppDataForm::Form;
-    else if (typeStr == "submit")
+	} else if (typeStr == "submit") {
         d->type = QXmppDataForm::Submit;
-    else if (typeStr == "cancel")
+	} else if (typeStr == "cancel") {
         d->type = QXmppDataForm::Cancel;
-    else if (typeStr == "result")
+	} else if (typeStr == "result") {
         d->type = QXmppDataForm::Result;
-    else
-    {
-        qWarning() << "Unknown form type" << typeStr;
-        return;
+	} else {
+		QXmppLogger::getLogger()->log(QXmppLogger::WarningMessage, QStringLiteral("Unknown form type ") + typeStr);
+		return;
     }
 
     /* form properties */
