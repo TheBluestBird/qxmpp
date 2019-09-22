@@ -3,6 +3,7 @@
  *
  * Author:
  *  Jeremy Lainé
+ *  Linus Jahn
  *
  * Source:
  *  https://github.com/qxmpp-project/qxmpp
@@ -21,12 +22,13 @@
  *
  */
 
-
 #ifndef QXMPPREGISTERIQ_H
 #define QXMPPREGISTERIQ_H
 
 #include "QXmppDataForm.h"
 #include "QXmppIq.h"
+
+class QXmppRegisterIqPrivate;
 
 /// \brief The QXmppRegisterIq class represents a registration IQ
 /// as defined by XEP-0077: In-Band Registration.
@@ -38,6 +40,18 @@
 class QXMPP_EXPORT QXmppRegisterIq : public QXmppIq
 {
 public:
+    enum RegisterType {
+        None,
+        Registered,
+        Remove
+    };
+
+    QXmppRegisterIq();
+    QXmppRegisterIq(const QXmppRegisterIq &other);
+    ~QXmppRegisterIq() override;
+
+    QXmppRegisterIq &operator=(const QXmppRegisterIq &other);
+
     QString email() const;
     void setEmail(const QString &email);
 
@@ -53,6 +67,9 @@ public:
     QString username() const;
     void setUsername(const QString &username);
 
+    RegisterType registerType() const;
+    void setRegisterType(const RegisterType &registerType);
+
     /// \cond
     static bool isRegisterIq(const QDomElement &element);
     /// \endcond
@@ -64,11 +81,7 @@ protected:
     /// \endcond
 
 private:
-    QXmppDataForm m_form;
-    QString m_email;
-    QString m_instructions;
-    QString m_password;
-    QString m_username;
+    QSharedDataPointer<QXmppRegisterIqPrivate> d;
 };
 
 #endif

@@ -3,6 +3,7 @@
  *
  * Author:
  *  Jeremy Lainé
+ *  Linus Jahn
  *
  * Source:
  *  https://github.com/qxmpp-project/qxmpp
@@ -35,6 +36,8 @@ private slots:
     void testResultWithForm();
     void testSet();
     void testSetWithForm();
+    void testRegistered();
+    void testRemove();
 };
 
 void tst_QXmppRegisterIq::testGet()
@@ -51,6 +54,7 @@ void tst_QXmppRegisterIq::testGet()
     QCOMPARE(iq.from(), QString());
     QCOMPARE(iq.type(), QXmppIq::Get);
     QCOMPARE(iq.instructions(), QString());
+    QCOMPARE(iq.registerType(), QXmppRegisterIq::None);
     QVERIFY(iq.username().isNull());
     QVERIFY(iq.password().isNull());
     QVERIFY(iq.email().isNull());
@@ -193,6 +197,54 @@ void tst_QXmppRegisterIq::testSetWithForm()
     QVERIFY(iq.password().isNull());
     QVERIFY(iq.email().isNull());
     QVERIFY(!iq.form().isNull());
+    serializePacket(iq, xml);
+}
+
+void tst_QXmppRegisterIq::testRegistered()
+{
+    const QByteArray xml = QByteArrayLiteral(
+        "<iq type=\"result\">"
+          "<query xmlns=\"jabber:iq:register\">"
+            "<registered/>"
+            "<username>juliet</username>"
+          "</query>"
+        "</iq>"
+    );
+
+    QXmppRegisterIq iq;
+    parsePacket(iq, xml);
+    QCOMPARE(iq.registerType(), QXmppRegisterIq::Registered);
+    QCOMPARE(iq.username(), QStringLiteral("juliet"));
+    serializePacket(iq, xml);
+
+    iq = QXmppRegisterIq();
+    iq.setType(QXmppIq::Result);
+    iq.setRegisterType(QXmppRegisterIq::Registered);
+    iq.setUsername(QStringLiteral("juliet"));
+    serializePacket(iq, xml);
+}
+
+void tst_QXmppRegisterIq::testRemove()
+{
+    const QByteArray xml = QByteArrayLiteral(
+        "<iq type=\"result\">"
+          "<query xmlns=\"jabber:iq:register\">"
+            "<remove/>"
+            "<username>juliet</username>"
+          "</query>"
+        "</iq>"
+    );
+
+    QXmppRegisterIq iq;
+    parsePacket(iq, xml);
+    QCOMPARE(iq.registerType(), QXmppRegisterIq::Remove);
+    QCOMPARE(iq.username(), QStringLiteral("juliet"));
+    serializePacket(iq, xml);
+
+    iq = QXmppRegisterIq();
+    iq.setType(QXmppIq::Result);
+    iq.setRegisterType(QXmppRegisterIq::Remove);
+    iq.setUsername(QStringLiteral("juliet"));
     serializePacket(iq, xml);
 }
 
