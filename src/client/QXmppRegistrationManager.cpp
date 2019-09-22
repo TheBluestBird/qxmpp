@@ -48,14 +48,32 @@ void QXmppRegistrationManager::changePassword(const QString &newPassword)
 	m_newPassword = newPassword;
 
 	QXmppRegisterIq iq;
-	iq.setType(QXmppIq::Set);
+    iq.setType(QXmppIq::Set);
 	iq.setTo(client()->configuration().domain());
 	iq.setFrom(client()->configuration().jid());
 	iq.setUsername(QXmppUtils::jidToUser(client()->configuration().jid()));
 	iq.setPassword(newPassword);
 	iq.setId(m_changePasswordIqId);
 
-	client()->sendPacket(iq);
+    client()->sendPacket(iq);
+}
+
+/// Cancels an existing registration on the server.
+
+QString QXmppRegistrationManager::deleteAccount()
+{
+    // there cannot be two parallel (un-)registration requests
+//    Q_ASSERT(m_registrationId.isEmpty());
+//    m_registrationId = QXmppUtils::generateStanzaHash(24);
+
+    QXmppRegisterIq iq;
+    iq.setType(QXmppIq::Set);
+    iq.setFrom(client()->configuration().jid());
+    iq.setRegisterType(QXmppRegisterIq::Remove);
+
+    if (client()->sendPacket(iq))
+        return iq.id();
+    return {};
 }
 
 void QXmppRegistrationManager::setClient(QXmppClient *client)
@@ -157,7 +175,7 @@ bool QXmppRegistrationManager::registrationSupported() const
 void QXmppRegistrationManager::requestRegistrationForm(const QString &service)
 {
 	QXmppRegisterIq iq;
-	iq.setType(QXmppIq::Get);
+    iq.setType(QXmppIq::Get);
 	iq.setTo(service);
 	client()->sendPacket(iq);
 }
@@ -180,7 +198,7 @@ void QXmppRegistrationManager::sendRegistrationForm()
 	m_registrationFormToSend.setType(QXmppDataForm::Submit);
 
 	QXmppRegisterIq iq;
-	iq.setType(QXmppIq::Set);
+    iq.setType(QXmppIq::Set);
 	iq.setTo(client()->configuration().domain());
 	iq.setForm(m_registrationFormToSend);
 

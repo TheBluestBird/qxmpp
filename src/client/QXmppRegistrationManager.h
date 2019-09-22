@@ -40,6 +40,7 @@ public:
     QStringList discoveryFeatures() const override;
 
     void changePassword(const QString &newPassword);
+    QString deleteAccount();
 
     bool registrationSupported() const;
 
