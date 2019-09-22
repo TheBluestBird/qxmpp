@@ -24,6 +24,7 @@
 #include "QXmppBobData.h"
 
 #include <QSharedData>
+#include <QMimeType>
 
 class QXmppBobDataPrivate : public QSharedData
 {
@@ -38,3 +39,45 @@ QXmppBobData::QXmppBobData()
 {
 
 }
+
+
+QXmppBobContentId QXmppBobIq::cid() const
+{
+    return d->cid;
+}
+
+void QXmppBobIq::setCid(const QXmppBobContentId &cid)
+{
+    d->cid = cid;
+}
+
+unsigned int QXmppBobIq::maxAge() const
+{
+    return d->maxAge;
+}
+
+void QXmppBobIq::setMaxAge(unsigned int maxAge)
+{
+    d->maxAge = maxAge;
+}
+
+QMimeType QXmppBobIq::contentType() const
+{
+    return d->contentType;
+}
+
+void QXmppBobIq::setContentType(const QMimeType &contentType)
+{
+    d->contentType = contentType;
+}
+
+QByteArray QXmppBobIq::data() const
+{
+    return d->data;
+}
+
+void QXmppBobIq::setData(const QByteArray &data)
+{
+    d->data = data;
+}
+

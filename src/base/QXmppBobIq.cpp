@@ -33,10 +33,6 @@
 class QXmppBobIqPrivate : public QSharedData
 {
 public:
-    QXmppBobContentId cid;
-    unsigned int maxAge = 0;
-    QMimeType contentType;
-    QByteArray data;
 };
 
 QXmppBobIq::QXmppBobIq()
@@ -49,46 +45,6 @@ QXmppBobIq::QXmppBobIq(const QXmppBobIq &other) = default;
 QXmppBobIq::~QXmppBobIq() = default;
 
 QXmppBobIq &QXmppBobIq::operator=(const QXmppBobIq &other) = default;
-
-QXmppBobContentId QXmppBobIq::cid() const
-{
-    return d->cid;
-}
-
-void QXmppBobIq::setCid(const QXmppBobContentId &cid)
-{
-    d->cid = cid;
-}
-
-unsigned int QXmppBobIq::maxAge() const
-{
-    return d->maxAge;
-}
-
-void QXmppBobIq::setMaxAge(unsigned int maxAge)
-{
-    d->maxAge = maxAge;
-}
-
-QMimeType QXmppBobIq::contentType() const
-{
-    return d->contentType;
-}
-
-void QXmppBobIq::setContentType(const QMimeType &contentType)
-{
-    d->contentType = contentType;
-}
-
-QByteArray QXmppBobIq::data() const
-{
-    return d->data;
-}
-
-void QXmppBobIq::setData(const QByteArray &data)
-{
-    d->data = data;
-}
 
 bool QXmppBobIq::isBobIq(const QDomElement &element)
 {

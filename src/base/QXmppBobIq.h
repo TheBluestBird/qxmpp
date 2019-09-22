@@ -40,18 +40,6 @@ public:
 
     QXmppBobIq &operator=(const QXmppBobIq &other);
 
-    QXmppBobContentId cid() const;
-    void setCid(const QXmppBobContentId &cid);
-
-    unsigned int maxAge() const;
-    void setMaxAge(unsigned int maxAge);
-
-    QMimeType contentType() const;
-    void setContentType(const QMimeType &contentType);
-
-    QByteArray data() const;
-    void setData(const QByteArray &data);
-
     static bool isBobIq(const QDomElement &element);
 
 protected:

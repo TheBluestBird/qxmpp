@@ -25,6 +25,7 @@
 #define QXMPPBOBDATA_H
 
 #include <QSharedDataPointer>
+#include <QMimeType>
 
 #include "QXmppBobContentId.h"
 
@@ -36,6 +37,18 @@ class QXmppBobData
 {
 public:
     QXmppBobData();
+
+    QXmppBobContentId cid() const;
+    void setCid(const QXmppBobContentId &cid);
+
+    unsigned int maxAge() const;
+    void setMaxAge(unsigned int maxAge);
+
+    QMimeType contentType() const;
+    void setContentType(const QMimeType &contentType);
+
+    QByteArray data() const;
+    void setData(const QByteArray &data);
 
 protected:
     /// \cond
